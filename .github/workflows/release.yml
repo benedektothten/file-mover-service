@@ -25,7 +25,7 @@
        - name: Restore and Build Project
          run: |
            dotnet restore
-           dotnet publish -c Release -o publish
+           dotnet publish -c Release -r win-x64 --self-contained true
 
        # Step 4: Install Inno Setup
        - name: Install Inno Setup
