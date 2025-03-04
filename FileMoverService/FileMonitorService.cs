@@ -46,7 +46,7 @@ public class FileMonitorService : BackgroundService
             var rule = _settings.Rules.FirstOrDefault(r => 
                 r.Extension.Equals(fileInfo.Extension, StringComparison.OrdinalIgnoreCase));
 
-            if (rule != null)
+            if (rule != null && !string.IsNullOrEmpty(rule.TargetFolder) && Path.Exists(rule.TargetFolder))
             {
                 try
                 {
