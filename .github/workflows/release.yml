@@ -30,8 +30,8 @@
        # Step 4: Install Inno Setup
        - name: Install Inno Setup
          run: |
-           curl -L -o innosetup.exe https://jrsoftware.org/download.php/is.exe
-           start /wait innosetup.exe /VERYSILENT /SP- /NORESTART
+            curl -L -o innosetup.exe https://jrsoftware.org/download.php/is.exe
+            ./innosetup.exe "/VERYSILENT" "/SP-" "/NORESTART"
 
        # Step 5: Build Installer with Inno Setup
        - name: Build Installer
