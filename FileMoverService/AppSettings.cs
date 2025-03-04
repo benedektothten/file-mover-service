@@ -2,14 +2,14 @@
 
 public class AppSettings
 {
-    public string DownloadFolder { get; set; }
-    public List<Rule> Rules { get; set; }
+    public required string DownloadFolder { get; init; }
+    public required List<Rule> Rules { get; init; }
     
-    public List<string> TempExtensions { get; set; }
+    public required List<string> TempExtensions { get; init; }
 
     public class Rule
     {
-        public string Extension { get; set; }
-        public string TargetFolder { get; set; }
+        public required string Extension { get; init; }
+        public required string TargetFolder { get; init; }
     }
 }
