@@ -8,7 +8,7 @@ public static class ConfigService
 {
     private static readonly string ConfigPath = Path.Combine(
         AppDomain.CurrentDomain.BaseDirectory,
-        "..", "FileMoverService", "appsettings.json");
+        "..", "service", "appsettings.json");
 
     private static readonly JsonSerializerOptions WriteOptions = new() { WriteIndented = true };
 

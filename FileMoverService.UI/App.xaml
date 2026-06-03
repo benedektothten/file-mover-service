@@ -5,8 +5,9 @@
              ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
         <tb:TaskbarIcon x:Key="TrayIcon"
+                        x:Name="TrayIcon"
                         ToolTipText="File Mover Service"
-                        TrayMouseDoubleClick="TrayOpen_Click">
+                        TrayLeftMouseUp="TrayOpen_Click">
             <tb:TaskbarIcon.ContextMenu>
                 <ContextMenu>
                     <MenuItem Header="Open" Click="TrayOpen_Click" FontWeight="Bold" />
