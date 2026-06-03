@@ -59,12 +59,17 @@ public partial class MainWindow : Window
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
-    private void StartService_Click(object sender, RoutedEventArgs e)
+    private void ToggleService_Click(object sender, RoutedEventArgs e)
     {
         try
         {
             using var sc = new ServiceController(ServiceName);
-            if (sc.Status != ServiceControllerStatus.Running)
+            if (sc.Status == ServiceControllerStatus.Running)
+            {
+                sc.Stop();
+                sc.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(10));
+            }
+            else
             {
                 sc.Start();
                 sc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(10));
@@ -72,26 +77,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Could not start service: {ex.Message}", "File Mover Service",
-                MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-        RefreshServiceButtons();
-    }
-
-    private void StopService_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            using var sc = new ServiceController(ServiceName);
-            if (sc.Status != ServiceControllerStatus.Stopped)
-            {
-                sc.Stop();
-                sc.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(10));
-            }
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Could not stop service: {ex.Message}", "File Mover Service",
+            MessageBox.Show($"Could not change service state: {ex.Message}", "File Mover Service",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
         RefreshServiceButtons();
@@ -103,14 +89,17 @@ public partial class MainWindow : Window
         {
             using var sc = new ServiceController(ServiceName);
             var running = sc.Status == ServiceControllerStatus.Running;
-            StartButton.IsEnabled = !running;
-            StopButton.IsEnabled = running;
+            ServiceButton.IsEnabled = true;
+            ServiceIndicator.Fill = running
+                ? System.Windows.Media.Brushes.Green
+                : System.Windows.Media.Brushes.Red;
+            ServiceLabel.Text = running ? "Stop Service" : "Start Service";
         }
         catch
         {
-            // Service not installed — disable both buttons
-            StartButton.IsEnabled = false;
-            StopButton.IsEnabled = false;
+            ServiceButton.IsEnabled = false;
+            ServiceIndicator.Fill = System.Windows.Media.Brushes.Gray;
+            ServiceLabel.Text = "Service unavailable";
         }
     }
 
