@@ -112,7 +112,7 @@ You can manage the service using the command line or the Windows Services applic
 ## **Requirements**
 
 - Windows OS.
-- .NET 9.0 runtime installed.
+- .NET 10.0 runtime installed.
 - Administrative privileges for installation and service management.
 
 ---
