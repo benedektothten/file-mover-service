@@ -1,7 +1,7 @@
    [Setup]
    AppName=FileMoverService
    AppVersion={#AppVersion}
-   DefaultDirName={pf}\FileMoverService
+   DefaultDirName={commonpf}\FileMoverService
    DefaultGroupName=FileMoverService
    OutputBaseFilename=FileMoverServiceInstaller
    Compression=lzma
