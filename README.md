@@ -101,7 +101,7 @@ You can manage the service using the command line or the Windows Services applic
   FileMoverService.exe status
   ```
 
-### Using the Windows Services Application
+### **Using the Windows Services Application**
 1. Open the `Run` dialog (Press `Win + R`).
 2. Type `services.msc` and press Enter.
 3. Locate the service named **"File Mover Service"**.
@@ -112,7 +112,7 @@ You can manage the service using the command line or the Windows Services applic
 ## **Requirements**
 
 - Windows OS.
-- .NET 9.0 runtime installed.
+- .NET 10.0 runtime installed.
 - Administrative privileges for installation and service management.
 
 ---
