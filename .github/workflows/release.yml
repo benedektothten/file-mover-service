@@ -1,48 +1,53 @@
-   name: Build and Release Installer
+name: Build and Release Installer
 
-   on:
-     release:
-       types:
-         - published
+on:
+  push:
+    branches:
+      - release/*
 
-   jobs:
-     build:
-       name: Build FileMoverService Release
-       runs-on: windows-latest
+jobs:
+  build:
+    name: Build FileMoverService Release
+    runs-on: windows-latest
+    permissions:
+      contents: write
 
-       steps:
-       # Step 1: Checkout Code
-       - name: Checkout Code
-         uses: actions/checkout@v3
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-       # Step 2: Set up .NET
-       - name: Set up .NET
-         uses: actions/setup-dotnet@v3
-         with:
-           dotnet-version: "10.0"
+      - name: Extract version from branch name
+        id: version
+        run: |
+          $branch = "${{ github.ref_name }}"
+          $version = $branch -replace '^release/', ''
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
 
-       # Step 3: Restore and Publish Project
-       - name: Restore and Build Project
-         run: |
-           dotnet restore
-           dotnet publish -c Release -r win-x64 --self-contained true
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
 
-       # Step 4: Install Inno Setup
-       - name: Install Inno Setup
-         run: |
-            curl -L -o innosetup.exe https://jrsoftware.org/download.php/is.exe
-            ./innosetup.exe
+      - name: Restore and Publish Project
+        run: dotnet restore && dotnet publish -c Release -r win-x64 --self-contained true -o publish /p:Version=${{ steps.version.outputs.VERSION }}
 
-       # Step 5: Build Installer with Inno Setup
-       - name: Build Installer
-         run: |
-           "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer/FileMoverService.iss
+      - name: Install Inno Setup
+        run: |
+          curl -L -o innosetup.exe https://jrsoftware.org/download.php/is.exe
+          ./innosetup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
 
-       # Step 6: Upload Installer to Release
-       - name: Upload Release Asset
-         uses: actions/upload-release-asset@v1
-         with:
-           upload_url: ${{ github.event.release.upload_url }}
-           asset_path: FileMoverServiceInstaller.exe
-           asset_name: FileMoverServiceInstaller.exe
-           content_type: application/octet-stream
+      - name: Build Installer
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
+            /DAppVersion="${{ steps.version.outputs.VERSION }}" `
+            FileMoverService.iss
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.VERSION }}
+          name: v${{ steps.version.outputs.VERSION }}
+          generate_release_notes: true
+          files: FileMoverServiceInstaller.exe

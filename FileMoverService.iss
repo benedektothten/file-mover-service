@@ -1,6 +1,6 @@
    [Setup]
    AppName=FileMoverService
-   AppVersion=1.0.0
+   AppVersion={#AppVersion}
    DefaultDirName={pf}\FileMoverService
    DefaultGroupName=FileMoverService
    OutputBaseFilename=FileMoverServiceInstaller
