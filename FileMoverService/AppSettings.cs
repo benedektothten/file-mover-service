@@ -2,7 +2,7 @@
 
 public class AppSettings
 {
-    public required string DownloadFolder { get; init; }
+    public required List<string> WatchFolders { get; init; }
     public required List<Rule> Rules { get; init; }
     
     public required List<string> TempExtensions { get; init; }

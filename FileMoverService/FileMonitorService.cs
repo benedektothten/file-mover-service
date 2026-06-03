@@ -5,9 +5,9 @@ namespace FileMoverService;
 public class FileMonitorService : BackgroundService
 {
     private readonly ILogger<FileMonitorService> _logger;
-    private readonly FileSystemWatcher _watcher;
+    private readonly List<FileSystemWatcher> _watchers = [];
     private readonly AppSettings _settings;
-    
+
     private readonly SemaphoreSlim _semaphore = new(2);
 
     public FileMonitorService(
@@ -17,15 +17,26 @@ public class FileMonitorService : BackgroundService
         _logger = logger;
         _settings = settings.Value;
 
-        _watcher = new FileSystemWatcher(_settings.DownloadFolder)
+        foreach (var folder in _settings.WatchFolders)
         {
-            NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
-            EnableRaisingEvents = true
-        };
+            if (!Directory.Exists(folder))
+            {
+                _logger.LogWarning("Watch folder does not exist, skipping: {Folder}", folder);
+                continue;
+            }
 
-        _watcher.Created += (s, e) => Task.Run(() => OnFileSystemEventAsync(s, e));
-        _watcher.Renamed += (s, e) => Task.Run(() => OnFileSystemEventAsync(s, e));
+            var watcher = new FileSystemWatcher(folder)
+            {
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
+                EnableRaisingEvents = true
+            };
 
+            watcher.Created += (s, e) => Task.Run(() => OnFileSystemEventAsync(s, e));
+            watcher.Renamed += (s, e) => Task.Run(() => OnFileSystemEventAsync(s, e));
+
+            _watchers.Add(watcher);
+            _logger.LogInformation("Watching folder: {Folder}", folder);
+        }
     }
 
     private async Task OnFileSystemEventAsync(object sender, FileSystemEventArgs e)
