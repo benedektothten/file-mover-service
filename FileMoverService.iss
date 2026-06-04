@@ -31,6 +31,10 @@ Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=admin
+; Silently close the running UI during install/upgrade so files are not locked
+CloseApplications=yes
+CloseApplicationsFilter=*{#UIExeName}
+RestartApplications=no
 
 SetupIconFile=
 WizardSmallImageFile=
@@ -86,8 +90,14 @@ Filename: "{app}\service\{#AppExeName}"; Parameters: "start";   Flags: runhidden
 Filename: "{app}\ui\{#UIExeName}"; Description: "Launch {#AppName} configuration UI"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
-Filename: "{app}\service\{#AppExeName}"; Parameters: "stop";      Flags: runhidden waituntilterminated; RunOnceId: "StopService"
-Filename: "{app}\service\{#AppExeName}"; Parameters: "uninstall"; Flags: runhidden waituntilterminated; RunOnceId: "UninstallService"
+; Kill the tray UI first — it locks files in {app}\ui and keeps the process alive
+Filename: "taskkill.exe";               Parameters: "/F /IM {#UIExeName}";  Flags: runhidden waituntilterminated; RunOnceId: "KillUI"
+Filename: "{app}\service\{#AppExeName}"; Parameters: "stop";                Flags: runhidden waituntilterminated; RunOnceId: "StopService"
+Filename: "{app}\service\{#AppExeName}"; Parameters: "uninstall";           Flags: runhidden waituntilterminated; RunOnceId: "UninstallService"
+
+[UninstallDelete]
+; Remove the entire install directory even if runtime files were left behind
+Type: filesandordirs; Name: "{app}"
 
 [Code]
 // ── .NET check — skipped in the bundled variant ───────────────────────────────
