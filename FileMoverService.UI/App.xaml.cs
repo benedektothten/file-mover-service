@@ -1,6 +1,10 @@
+using System.Diagnostics;
 using System.Drawing;
 using System.ServiceProcess;
 using System.Windows;
+using ContextMenu = System.Windows.Controls.ContextMenu;
+using MenuItem = System.Windows.Controls.MenuItem;
+using Separator = System.Windows.Controls.Separator;
 using System.Windows.Threading;
 using Hardcodet.Wpf.TaskbarNotification;
 using Application = System.Windows.Application;
@@ -11,6 +15,7 @@ public partial class App : Application
 {
     private TaskbarIcon _trayIcon = null!;
     private MainWindow? _mainWindow;
+    private MenuItem _serviceMenuItem = null!;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -37,8 +42,82 @@ public partial class App : Application
         Logger.Log("Application started");
         _trayIcon = (TaskbarIcon)FindResource("TrayIcon");
         _trayIcon.Icon = CreateTrayIcon();
+        _trayIcon.ContextMenu = BuildContextMenu();
         ShowMainWindow();
     }
+
+    // ── Context menu ──────────────────────────────────────────────────────────
+
+    private ContextMenu BuildContextMenu()
+    {
+        var openItem = new MenuItem { Header = "Open", FontWeight = System.Windows.FontWeights.Bold };
+        openItem.Click += (_, _) => ShowMainWindow();
+
+        _serviceMenuItem = new MenuItem();
+        _serviceMenuItem.Click += (_, _) => TrayToggleService();
+
+        var exitItem = new MenuItem { Header = "Exit" };
+        exitItem.Click += (_, _) => Shutdown();
+
+        var menu = new ContextMenu();
+        menu.Items.Add(openItem);
+        menu.Items.Add(new Separator());
+        menu.Items.Add(_serviceMenuItem);
+        menu.Items.Add(new Separator());
+        menu.Items.Add(exitItem);
+
+        // Refresh service status every time the menu opens
+        menu.Opened += (_, _) => RefreshServiceMenuItem();
+
+        return menu;
+    }
+
+    private void RefreshServiceMenuItem()
+    {
+        try
+        {
+            using var sc = new ServiceController(FileMoverService.UI.MainWindow.ServiceName);
+            _serviceMenuItem.IsEnabled = true;
+            _serviceMenuItem.Header = sc.Status == ServiceControllerStatus.Running
+                ? "Stop Service" : "Start Service";
+        }
+        catch
+        {
+            _serviceMenuItem.Header = "Service Unavailable";
+            _serviceMenuItem.IsEnabled = false;
+        }
+    }
+
+    private void TrayToggleService()
+    {
+        try
+        {
+            using var sc = new ServiceController(FileMoverService.UI.MainWindow.ServiceName);
+            var command = sc.Status == ServiceControllerStatus.Running ? "stop" : "start";
+            var exe = Environment.ProcessPath ?? Process.GetCurrentProcess().MainModule!.FileName;
+            var psi = new ProcessStartInfo(exe, $"--elevate service {command}")
+            {
+                Verb = "runas",
+                UseShellExecute = true
+            };
+            Process.Start(psi)?.WaitForExit(20_000);
+        }
+        catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
+        {
+            // User cancelled UAC — ignore
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show($"Could not change service state: {ex.Message}",
+                "File Mover Service", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+
+        // Refresh the main window indicator if it is open
+        _mainWindow?.RefreshServiceStatus();
+
+    }
+
+    // ── Elevated helper ───────────────────────────────────────────────────────
 
     private static void RunElevatedServiceCommand(string command)
     {
@@ -63,25 +142,26 @@ public partial class App : Application
         }
     }
 
+    // ── Window management ─────────────────────────────────────────────────────
+
+    internal void ShowMainWindow()
+    {
+        if (_mainWindow == null || !_mainWindow.IsLoaded)
+            _mainWindow = new MainWindow();
+
+        // Always Show() — handles both first open and re-show after Hide()
+        _mainWindow.Show();
+        _mainWindow.WindowState = WindowState.Normal;
+        _mainWindow.Activate();
+    }
+
     protected override void OnExit(ExitEventArgs e)
     {
         _trayIcon?.Dispose();
         base.OnExit(e);
     }
 
-    internal void ShowMainWindow()
-    {
-        if (_mainWindow == null || !_mainWindow.IsLoaded)
-        {
-            _mainWindow = new MainWindow();
-            _mainWindow.Show();
-        }
-        else
-        {
-            _mainWindow.WindowState = WindowState.Normal;
-            _mainWindow.Activate();
-        }
-    }
+    // ── Tray icon ─────────────────────────────────────────────────────────────
 
     private static Icon CreateTrayIcon()
     {
@@ -96,5 +176,4 @@ public partial class App : Application
     }
 
     private void TrayOpen_Click(object sender, RoutedEventArgs e) => ShowMainWindow();
-    private void TrayExit_Click(object sender, RoutedEventArgs e) => Shutdown();
 }

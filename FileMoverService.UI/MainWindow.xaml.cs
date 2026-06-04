@@ -100,8 +100,8 @@ public partial class MainWindow : Window
             ConfigService.Save(_entries);
             Logger.Log("Save succeeded");
             ClearDirty();
-            MessageBox.Show("Configuration saved.", "File Mover Service",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show("Configuration saved. Changes apply automatically — no service restart needed.",
+                "File Mover Service", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
@@ -145,6 +145,8 @@ public partial class MainWindow : Window
             RefreshServiceButtons();
         }
     }
+
+    internal void RefreshServiceStatus() => RefreshServiceButtons();
 
     private void RefreshServiceButtons()
     {
