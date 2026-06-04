@@ -6,9 +6,9 @@ namespace FileMoverService.UI;
 
 public static class ConfigService
 {
-    private static readonly string ConfigPath = Path.Combine(
-        AppDomain.CurrentDomain.BaseDirectory,
-        "..", "service", "appsettings.json");
+    internal static readonly string ConfigPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+        "FileMoverService", "appsettings.json");
 
     private static readonly JsonSerializerOptions WriteOptions = new() { WriteIndented = true };
 
@@ -35,7 +35,10 @@ public static class ConfigService
 
     public static void Save(IEnumerable<WatchFolderEntry> entries)
     {
-        var json = File.ReadAllText(ConfigPath);
+        var resolvedPath = Path.GetFullPath(ConfigPath);
+        Directory.CreateDirectory(Path.GetDirectoryName(resolvedPath)!);
+        Logger.Log($"ConfigService.Save: resolved path = {resolvedPath}, exists = {File.Exists(resolvedPath)}");
+        var json = File.ReadAllText(resolvedPath);
         var root = JsonNode.Parse(json)!;
 
         var foldersArray = new JsonArray();
@@ -56,6 +59,6 @@ public static class ConfigService
         }
 
         root["AppSettings"]!["WatchFolders"] = foldersArray;
-        File.WriteAllText(ConfigPath, root.ToJsonString(WriteOptions));
+        File.WriteAllText(resolvedPath, root.ToJsonString(WriteOptions));
     }
 }

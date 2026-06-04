@@ -13,7 +13,7 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -30,22 +30,67 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
-      - name: Publish service
-        run: dotnet publish FileMoverService/FileMoverService.csproj -c Release -r win-x64 --self-contained true -o publish-service /p:Version=${{ steps.version.outputs.VERSION }}
+      # -----------------------------------------------------------------------
+      # Small installer — framework-dependent (~3 MB, requires .NET 10)
+      # -----------------------------------------------------------------------
 
-      - name: Publish UI
-        run: dotnet publish FileMoverService.UI/FileMoverService.UI.csproj -c Release -r win-x64 --self-contained true -o publish-ui /p:Version=${{ steps.version.outputs.VERSION }}
+      - name: Publish service (framework-dependent)
+        run: >
+          dotnet publish FileMoverService/FileMoverService.csproj
+          -c Release -r win-x64 --self-contained false
+          -o publish-service
+          /p:Version=${{ steps.version.outputs.VERSION }}
+
+      - name: Publish UI (framework-dependent)
+        run: >
+          dotnet publish FileMoverService.UI/FileMoverService.UI.csproj
+          -c Release -r win-x64 --self-contained false
+          -o publish-ui
+          /p:Version=${{ steps.version.outputs.VERSION }}
+
+      # -----------------------------------------------------------------------
+      # Bundled installer — self-contained (~75 MB, .NET included)
+      # -----------------------------------------------------------------------
+
+      - name: Publish service (self-contained)
+        run: >
+          dotnet publish FileMoverService/FileMoverService.csproj
+          -c Release -r win-x64 --self-contained true
+          -o publish-service-bundled
+          /p:Version=${{ steps.version.outputs.VERSION }}
+
+      - name: Publish UI (self-contained)
+        run: >
+          dotnet publish FileMoverService.UI/FileMoverService.UI.csproj
+          -c Release -r win-x64 --self-contained true
+          -o publish-ui-bundled
+          /p:Version=${{ steps.version.outputs.VERSION }}
+
+      # -----------------------------------------------------------------------
+      # Compile both installers
+      # -----------------------------------------------------------------------
 
       - name: Install Inno Setup
         run: |
           curl -L -o innosetup.exe https://jrsoftware.org/download.php/is.exe
           ./innosetup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
 
-      - name: Build Installer
-        run: |
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
-            /DAppVersion="${{ steps.version.outputs.VERSION }}" `
-            FileMoverService.iss
+      - name: Compile small installer
+        run: >
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          /DAppVersion="${{ steps.version.outputs.VERSION }}"
+          FileMoverService.iss
+
+      - name: Compile bundled installer
+        run: >
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          /DAppVersion="${{ steps.version.outputs.VERSION }}"
+          /DBundled
+          FileMoverService.iss
+
+      # -----------------------------------------------------------------------
+      # Publish GitHub Release with both files
+      # -----------------------------------------------------------------------
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -53,4 +98,6 @@ jobs:
           tag_name: v${{ steps.version.outputs.VERSION }}
           name: v${{ steps.version.outputs.VERSION }}
           generate_release_notes: true
-          files: Output/FileMoverServiceInstaller.exe
+          files: |
+            Output/FileMoverServiceInstaller.exe
+            Output/FileMoverServiceInstaller-Full.exe

@@ -3,6 +3,13 @@ using Topshelf;
 
 var builder = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder(args);
 
+// Load config from %ProgramData%\FileMoverService\appsettings.json so both the
+// service and the UI read/write the same file without needing elevated rights.
+var sharedConfigPath = Path.Combine(
+    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+    "FileMoverService", "appsettings.json");
+builder.Configuration.AddJsonFile(sharedConfigPath, optional: true, reloadOnChange: true);
+
 // Configure services
 builder.Services.AddSingleton<IHostedService, FileMonitorService>();
 builder.Services.Configure<AppSettings>(
@@ -30,9 +37,9 @@ HostFactory.Run(configurator =>
 
     // Service Configuration
     configurator.RunAsLocalSystem();
-    configurator.SetServiceName("TorrentMoverService");
-    configurator.SetDisplayName("Torrent Mover Service");
-    configurator.SetDescription("Automatically moves downloaded torrent files");
+    configurator.SetServiceName("FileMoverService");
+    configurator.SetDisplayName("File Mover Service");
+    configurator.SetDescription("Automatically moves files based on configured rules.");
 
     // Startup Type
     configurator.StartAutomatically();

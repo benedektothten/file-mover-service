@@ -4,17 +4,25 @@
              xmlns:tb="http://www.hardcodet.net/taskbar"
              ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
-        <tb:TaskbarIcon x:Key="TrayIcon"
-                        x:Name="TrayIcon"
-                        ToolTipText="File Mover Service"
-                        TrayLeftMouseUp="TrayOpen_Click">
-            <tb:TaskbarIcon.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Header="Open" Click="TrayOpen_Click" FontWeight="Bold" />
-                    <Separator />
-                    <MenuItem Header="Exit" Click="TrayExit_Click" />
-                </ContextMenu>
-            </tb:TaskbarIcon.ContextMenu>
-        </tb:TaskbarIcon>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Light theme loaded first; ThemeManager swaps it at runtime -->
+                <ResourceDictionary Source="Themes/LightTheme.xaml"/>
+                <!-- Control templates that consume the theme brushes via DynamicResource -->
+                <ResourceDictionary Source="Themes/Controls.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <tb:TaskbarIcon x:Key="TrayIcon"
+                            ToolTipText="File Mover Service"
+                            TrayLeftMouseUp="TrayOpen_Click">
+                <tb:TaskbarIcon.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Open" Click="TrayOpen_Click" FontWeight="Bold"/>
+                        <Separator/>
+                        <MenuItem Header="Exit" Click="TrayExit_Click"/>
+                    </ContextMenu>
+                </tb:TaskbarIcon.ContextMenu>
+            </tb:TaskbarIcon>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>
