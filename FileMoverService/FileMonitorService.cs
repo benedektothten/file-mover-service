@@ -1,41 +1,79 @@
 using Microsoft.Extensions.Options;
+using System.Threading;
 
 namespace FileMoverService;
 
 public class FileMonitorService : BackgroundService
 {
     private readonly ILogger<FileMonitorService> _logger;
-    private readonly List<FileSystemWatcher> _watchers = [];
-    private readonly AppSettings _settings;
-
+    private readonly IOptionsMonitor<AppSettings> _optionsMonitor;
     private readonly SemaphoreSlim _semaphore = new(2);
+    private readonly Lock _watcherLock = new();
+    private List<FileSystemWatcher> _watchers = [];
+    private IDisposable? _changeListener;
 
     public FileMonitorService(
         ILogger<FileMonitorService> logger,
-        IOptions<AppSettings> settings)
+        IOptionsMonitor<AppSettings> optionsMonitor)
     {
         _logger = logger;
-        _settings = settings.Value;
+        _optionsMonitor = optionsMonitor;
+    }
 
-        foreach (var watchFolder in _settings.WatchFolders)
+    public override Task StartAsync(CancellationToken cancellationToken)
+    {
+        RebuildWatchers(_optionsMonitor.CurrentValue);
+        _changeListener = _optionsMonitor.OnChange(settings =>
         {
-            if (!Directory.Exists(watchFolder.SourceFolder))
+            _logger.LogInformation("Configuration changed, reloading watchers...");
+            RebuildWatchers(settings);
+        });
+        return base.StartAsync(cancellationToken);
+    }
+
+    public override Task StopAsync(CancellationToken cancellationToken)
+    {
+        _changeListener?.Dispose();
+        DisposeWatchers();
+        return base.StopAsync(cancellationToken);
+    }
+
+    private void RebuildWatchers(AppSettings settings)
+    {
+        lock (_watcherLock)
+        {
+            DisposeWatchers();
+            _watchers = [];
+
+            foreach (var watchFolder in settings.WatchFolders)
             {
-                _logger.LogWarning("Watch folder does not exist, skipping: {Folder}", watchFolder.SourceFolder);
-                continue;
+                if (!Directory.Exists(watchFolder.SourceFolder))
+                {
+                    _logger.LogWarning("Watch folder does not exist, skipping: {Folder}", watchFolder.SourceFolder);
+                    continue;
+                }
+
+                var watcher = new FileSystemWatcher(watchFolder.SourceFolder)
+                {
+                    NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
+                    EnableRaisingEvents = true
+                };
+
+                watcher.Created += (s, e) => Task.Run(() => OnFileSystemEventAsync(s, e, watchFolder));
+                watcher.Renamed += (s, e) => Task.Run(() => OnFileSystemEventAsync(s, e, watchFolder));
+
+                _watchers.Add(watcher);
+                _logger.LogInformation("Watching folder: {Source} -> {Target}", watchFolder.SourceFolder, watchFolder.TargetFolder);
             }
+        }
+    }
 
-            var watcher = new FileSystemWatcher(watchFolder.SourceFolder)
-            {
-                NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
-                EnableRaisingEvents = true
-            };
-
-            watcher.Created += (s, e) => Task.Run(() => OnFileSystemEventAsync(s, e, watchFolder));
-            watcher.Renamed += (s, e) => Task.Run(() => OnFileSystemEventAsync(s, e, watchFolder));
-
-            _watchers.Add(watcher);
-            _logger.LogInformation("Watching folder: {Source} -> {Target}", watchFolder.SourceFolder, watchFolder.TargetFolder);
+    private void DisposeWatchers()
+    {
+        foreach (var watcher in _watchers)
+        {
+            watcher.EnableRaisingEvents = false;
+            watcher.Dispose();
         }
     }
 
@@ -78,7 +116,7 @@ public class FileMonitorService : BackgroundService
     }
 
     private bool IsTemporaryFile(FileInfo fileInfo) =>
-        _settings.TempExtensions.Contains(fileInfo.Extension) || fileInfo.Length < 1024;
+        _optionsMonitor.CurrentValue.TempExtensions.Contains(fileInfo.Extension) || fileInfo.Length < 1024;
 
     private bool IsFileLocked(FileInfo file)
     {

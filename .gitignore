@@ -148,6 +148,16 @@ DocProject/Help/html
 # Click-Once directory
 publish/
 
+# Claude Code internal instructions
+CLAUDE.md
+
+# Release build artefacts
+publish-service/
+publish-service-bundled/
+publish-ui/
+publish-ui-bundled/
+Output/
+
 # Publish Web Output
 *.[Pp]ublish.xml
 *.azurePubxml
