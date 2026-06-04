@@ -18,6 +18,7 @@ public class WatchFolderEntry : INotifyPropertyChanged, INotifyDataErrorInfo
             _sourceFolder = value;
             OnPropertyChanged(nameof(SourceFolder));
             Validate(nameof(SourceFolder), value);
+            ValidateSameFolder();
         }
     }
 
@@ -29,6 +30,7 @@ public class WatchFolderEntry : INotifyPropertyChanged, INotifyDataErrorInfo
             _targetFolder = value;
             OnPropertyChanged(nameof(TargetFolder));
             Validate(nameof(TargetFolder), value);
+            ValidateSameFolder();
         }
     }
 
@@ -66,5 +68,38 @@ public class WatchFolderEntry : INotifyPropertyChanged, INotifyDataErrorInfo
 
         ErrorsChanged?.Invoke(this, new DataErrorsChangedEventArgs(property));
         OnPropertyChanged(nameof(HasErrors));
+    }
+
+    private void ValidateSameFolder()
+    {
+        const string key = nameof(TargetFolder);
+        const string msg = "Source and target folders must be different.";
+
+        var src = _sourceFolder?.Trim();
+        var tgt = _targetFolder?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(src) && !string.IsNullOrWhiteSpace(tgt))
+        {
+            bool same;
+            try { same = string.Equals(Path.GetFullPath(src), Path.GetFullPath(tgt), StringComparison.OrdinalIgnoreCase); }
+            catch { same = string.Equals(src, tgt, StringComparison.OrdinalIgnoreCase); }
+
+            if (same)
+            {
+                _errors[key] = [msg];
+                ErrorsChanged?.Invoke(this, new DataErrorsChangedEventArgs(key));
+                OnPropertyChanged(nameof(HasErrors));
+                return;
+            }
+        }
+
+        // Clear same-folder error if it was previously set (leave other errors intact)
+        if (_errors.TryGetValue(key, out var list) && list.Contains(msg))
+        {
+            list.Remove(msg);
+            if (list.Count == 0) _errors.Remove(key);
+            ErrorsChanged?.Invoke(this, new DataErrorsChangedEventArgs(key));
+            OnPropertyChanged(nameof(HasErrors));
+        }
     }
 }

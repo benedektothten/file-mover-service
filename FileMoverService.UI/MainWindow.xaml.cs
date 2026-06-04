@@ -50,12 +50,14 @@ public partial class MainWindow : Window
     {
         _isDirty = true;
         Title = BaseTitle + " *";
+        SaveButton.IsEnabled = true;
     }
 
     private void ClearDirty()
     {
         _isDirty = false;
         Title = BaseTitle;
+        SaveButton.IsEnabled = false;
     }
 
     // ── Button handlers ───────────────────────────────────────────────────────
@@ -100,8 +102,6 @@ public partial class MainWindow : Window
             ConfigService.Save(_entries);
             Logger.Log("Save succeeded");
             ClearDirty();
-            MessageBox.Show("Configuration saved. Changes apply automatically — no service restart needed.",
-                "File Mover Service", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
