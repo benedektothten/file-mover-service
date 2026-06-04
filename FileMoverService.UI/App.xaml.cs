@@ -147,7 +147,10 @@ public partial class App : Application
     internal void ShowMainWindow()
     {
         if (_mainWindow == null || !_mainWindow.IsLoaded)
+        {
             _mainWindow = new MainWindow();
+            _mainWindow.Icon = CreateWindowIcon();
+        }
 
         // Always Show() — handles both first open and re-show after Hide()
         _mainWindow.Show();
@@ -161,9 +164,9 @@ public partial class App : Application
         base.OnExit(e);
     }
 
-    // ── Tray icon ─────────────────────────────────────────────────────────────
+    // ── Icon ──────────────────────────────────────────────────────────────────
 
-    private static Icon CreateTrayIcon()
+    private static Bitmap CreateIconBitmap()
     {
         var bitmap = new Bitmap(32, 32);
         using var g = Graphics.FromImage(bitmap);
@@ -172,7 +175,28 @@ public partial class App : Application
         g.DrawString("F", new Font("Segoe UI", 14, System.Drawing.FontStyle.Bold), Brushes.White,
             new RectangleF(0, 4, 32, 28),
             new StringFormat { Alignment = StringAlignment.Center });
+        return bitmap;
+    }
+
+    private static Icon CreateTrayIcon()
+    {
+        using var bitmap = CreateIconBitmap();
         return Icon.FromHandle(bitmap.GetHicon());
+    }
+
+    internal static System.Windows.Media.ImageSource CreateWindowIcon()
+    {
+        using var bitmap = CreateIconBitmap();
+        using var ms = new System.IO.MemoryStream();
+        bitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+        ms.Seek(0, System.IO.SeekOrigin.Begin);
+        var image = new System.Windows.Media.Imaging.BitmapImage();
+        image.BeginInit();
+        image.StreamSource = ms;
+        image.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+        image.EndInit();
+        image.Freeze();
+        return image;
     }
 
     private void TrayOpen_Click(object sender, RoutedEventArgs e) => ShowMainWindow();
