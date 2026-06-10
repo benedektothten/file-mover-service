@@ -1,46 +1,41 @@
 using FileMoverService;
+using Serilog;
 using Topshelf;
 
-var builder = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder(args);
-
-// Load config from %ProgramData%\FileMoverService\appsettings.json so both the
-// service and the UI read/write the same file without needing elevated rights.
-var sharedConfigPath = Path.Combine(
+var logPath = Path.Combine(
     Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-    "FileMoverService", "appsettings.json");
-builder.Configuration.AddJsonFile(sharedConfigPath, optional: true, reloadOnChange: true);
+    "FileMoverService", "logs", "service-.log");
 
-// Configure services
-builder.Services.AddSingleton<IHostedService, FileMonitorService>();
-builder.Services.Configure<AppSettings>(
-    builder.Configuration.GetSection(nameof(AppSettings)));
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .WriteTo.File(
+        logPath,
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 14,
+        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+    .CreateLogger();
 
-// Configure Topshelf
+var builder = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder(args);
+builder.Services.AddHostedService<FileMonitorService>();
+builder.Logging.ClearProviders();
+builder.Logging.AddSerilog();
+
 HostFactory.Run(configurator =>
 {
-    configurator.Service<IHost>(serviceConfigurator =>
+    configurator.Service<IHost>(s =>
     {
-        serviceConfigurator.ConstructUsing(() => 
-            builder.Build());
-        
-        serviceConfigurator.WhenStarted(host => 
-        {
-            Task.Run(() => host.StartAsync()); // Start in a background task
-        });
-
-        serviceConfigurator.WhenStopped(host =>
+        s.ConstructUsing(() => builder.Build());
+        s.WhenStarted(host => Task.Run(() => host.StartAsync()));
+        s.WhenStopped(host =>
         {
             host.StopAsync().GetAwaiter().GetResult();
+            Log.CloseAndFlush();
         });
-
     });
 
-    // Service Configuration
     configurator.RunAsLocalSystem();
     configurator.SetServiceName("FileMoverService");
     configurator.SetDisplayName("File Mover Service");
     configurator.SetDescription("Automatically moves files based on configured rules.");
-
-    // Startup Type
     configurator.StartAutomatically();
 });

@@ -14,15 +14,7 @@
 
             <tb:TaskbarIcon x:Key="TrayIcon"
                             ToolTipText="File Mover Service"
-                            TrayLeftMouseUp="TrayOpen_Click">
-                <tb:TaskbarIcon.ContextMenu>
-                    <ContextMenu>
-                        <MenuItem Header="Open" Click="TrayOpen_Click" FontWeight="Bold"/>
-                        <Separator/>
-                        <MenuItem Header="Exit" Click="TrayExit_Click"/>
-                    </ContextMenu>
-                </tb:TaskbarIcon.ContextMenu>
-            </tb:TaskbarIcon>
+                            TrayLeftMouseUp="TrayOpen_Click"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

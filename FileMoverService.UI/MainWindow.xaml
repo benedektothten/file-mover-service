@@ -76,8 +76,8 @@
             </Button>
 
             <Button Grid.Column="4" Content="Add Row" Click="AddRow_Click"/>
-            <Button Grid.Column="6" Content="Save" Click="Save_Click"
-                    Style="{StaticResource PrimaryButton}"/>
+            <Button Grid.Column="6" x:Name="SaveButton" Content="Save" Click="Save_Click"
+                    Style="{StaticResource PrimaryButton}" IsEnabled="False"/>
         </Grid>
 
         <!-- Row list + empty state -->
