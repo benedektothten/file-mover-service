@@ -37,7 +37,6 @@ public partial class App : Application
         Logger.Log("Application started");
         _trayIcon = (TaskbarIcon)FindResource("TrayIcon");
         _trayIcon.Icon = CreateTrayIcon();
-        ShowMainWindow();
     }
 
     private static void RunElevatedServiceCommand(string command)
