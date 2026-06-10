@@ -43,7 +43,7 @@ public partial class App : Application
         _trayIcon = (TaskbarIcon)FindResource("TrayIcon");
         _trayIcon.Icon = CreateTrayIcon();
         _trayIcon.ContextMenu = BuildContextMenu();
-        ShowMainWindow();
+
     }
 
     // ── Context menu ──────────────────────────────────────────────────────────
